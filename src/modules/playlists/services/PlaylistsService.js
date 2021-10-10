@@ -6,12 +6,37 @@ const InvariantError = require('../../../exceptions/InvariantError');
 
 const logger = require('../../../utils/logger');
 
-const ctx = 'Songs-Services-SongsService';
+const ctx = 'Songs-Services-PlaylistsService';
 
-class SongsService {
+class PlaylistsService {
   constructor() {
     this._pool = new Pool();
   }
+
+  // async addSong({
+  //   title,
+  //   year,
+  //   performer,
+  //   genre,
+  //   duration,
+  // }) {
+  //   const id = `song-${nanoid(16)}`;
+  //   const insertedAt = new Date().toISOString();
+
+  //   const query = {
+  //     text: 'INSERT INTO songs VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+  //     values: [id, title, year, performer, genre, duration, insertedAt],
+  //   };
+
+  //   const result = await this._pool.query(query);
+
+  //   if (!result.rows[0].id) {
+  //     logger.warn(ctx, 'Failed to add song', 'addSong');
+  //     throw new InvariantError('Failed to add song');
+  //   }
+
+  //   return result.rows[0].id;
+  // }
 
   async addSong(payload) {
     const id = `song-${nanoid(16)}`;
@@ -87,4 +112,4 @@ class SongsService {
   }
 }
 
-module.exports = SongsService;
+module.exports = PlaylistsService;

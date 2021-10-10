@@ -1,31 +1,31 @@
 const ClientError = require('../../../exceptions/ClientError');
 const logger = require('../../../utils/logger');
 
-const ctx = 'Songs-Api-Handler';
+const ctx = 'Playlists-Api-Handler';
 
-class SongsHandler {
+class PlaylistsHandler {
   constructor(service, validator) {
     this._service = service;
     this._validator = validator;
 
-    this.postSongHandler = this.postSongHandler.bind(this);
-    this.getSongsHandler = this.getSongsHandler.bind(this);
-    this.getSongByIdHandler = this.getSongByIdHandler.bind(this);
-    this.putSongByIdHandler = this.putSongByIdHandler.bind(this);
-    this.deleteSongByIdHandler = this.deleteSongByIdHandler.bind(this);
+    this.postPlaylistHandler = this.postPlaylistHandler.bind(this);
+    this.getPlaylistsHandler = this.getPlaylistsHandler.bind(this);
+    this.getPlaylistByIdHandler = this.getPlaylistByIdHandler.bind(this);
+    this.putPlaylistByIdHandler = this.putPlaylistByIdHandler.bind(this);
+    this.deletePlaylistByIdHandler = this.deletePlaylistByIdHandler.bind(this);
   }
 
-  async postSongHandler({ payload }, h) {
+  async postPlaylistHandler({ payload }, h) {
     try {
-      this._validator.validateSongPayload(payload);
+      this._validator.validatePlaylistPayload(payload);
 
-      const songId = await this._service.addSong(payload);
+      const playlistId = await this._service.addPlaylist(payload);
 
       const response = h.response({
         status: 'success',
         message: 'Song added successfully',
         data: {
-          songId,
+          playlistId,
         },
       });
       response.code(201);
@@ -38,7 +38,7 @@ class SongsHandler {
           message: error.message,
         });
         response.code(error.statusCode);
-        logger.warn(ctx, 'Bad Request', 'postSongHandler', error.name);
+        logger.warn(ctx, 'Bad Request', 'postPlaylistHandler', error.name);
         return response;
       }
       // Server ERROR!
@@ -47,18 +47,18 @@ class SongsHandler {
         message: 'Sorry, there was a failure on server.',
       });
       response.code(500);
-      logger.error(ctx, 'Internal Error', 'postSongHandler', error.name);
+      logger.error(ctx, 'Internal Error', 'postPlaylistHandler', error.name);
       return response;
     }
   }
 
-  async getSongsHandler(request, h) {
+  async getPlaylistsHandler(request, h) {
     try {
-      const songs = await this._service.getSongs();
+      const playlists = await this._service.getPlaylists();
       return {
         status: 'success',
         data: {
-          songs,
+          playlists,
         },
       };
     } catch (error) {
@@ -68,7 +68,7 @@ class SongsHandler {
           message: error.message,
         });
         response.code(error.statusCode);
-        logger.warn(ctx, 'Bad Request', 'getSongsHandler', error.name);
+        logger.warn(ctx, 'Bad Request', 'getPlaylistsHandler', error.name);
         return response;
       }
 
@@ -78,19 +78,19 @@ class SongsHandler {
         message: 'Sorry, there was a failure on server.',
       });
       response.code(500);
-      logger.error(ctx, 'Internal Error', 'getSongsHandler', error.name);
+      logger.error(ctx, 'Internal Error', 'getPlaylistsHandler', error.name);
       return response;
     }
   }
 
-  async getSongByIdHandler(request, h) {
+  async getPlaylistByIdHandler(request, h) {
     try {
       const { id } = request.params;
-      const song = await this._service.getSongById(id);
+      const playlist = await this._service.getPlaylistById(id);
       return {
         status: 'success',
         data: {
-          song,
+          playlist,
         },
       };
     } catch (error) {
@@ -100,7 +100,7 @@ class SongsHandler {
           message: error.message,
         });
         response.code(error.statusCode);
-        logger.warn(ctx, 'Bad Request', 'getSongByIdHandler', error.name);
+        logger.warn(ctx, 'Bad Request', 'getPlaylistByIdHandler', error.name);
         return response;
       }
       // Server ERROR!
@@ -109,20 +109,20 @@ class SongsHandler {
         message: 'Sorry, there was a failure on server.',
       });
       response.code(500);
-      logger.error(ctx, 'Internal Error', 'getSongByIdHandler', error.name);
+      logger.error(ctx, 'Internal Error', 'getPlaylistByIdHandler', error.name);
       return response;
     }
   }
 
-  async putSongByIdHandler(request, h) {
+  async putPlaylistByIdHandler(request, h) {
     try {
-      this._validator.validateSongPayload(request.payload);
+      this._validator.validatePlaylistPayload(request.payload);
       const {
         title, year, performer, genre, duration,
       } = request.payload;
       const { id } = request.params;
 
-      await this._service.editSongById(id, {
+      await this._service.editPlaylistById(id, {
         title, year, performer, genre, duration,
       });
 
@@ -137,7 +137,7 @@ class SongsHandler {
           message: error.message,
         });
         response.code(error.statusCode);
-        logger.warn(ctx, 'Bad Request', 'putSongByIdHandler', error.name);
+        logger.warn(ctx, 'Bad Request', 'putPlaylistByIdHandler', error.name);
         return response;
       }
 
@@ -147,18 +147,18 @@ class SongsHandler {
         message: 'Sorry, there was a failure on server.',
       });
       response.code(500);
-      logger.error(ctx, 'Internal Error', 'putSongByIdHandler', error.name);
+      logger.error(ctx, 'Internal Error', 'putPlaylistByIdHandler', error.name);
       return response;
     }
   }
 
-  async deleteSongByIdHandler(request, h) {
+  async deletePlaylistByIdHandler(request, h) {
     try {
       const { id } = request.params;
-      await this._service.deleteSongById(id);
+      await this._service.deletePlaylistById(id);
       return {
         status: 'success',
-        message: 'Song deleted successfully',
+        message: 'Playlist deleted successfully',
       };
     } catch (error) {
       if (error instanceof ClientError) {
@@ -167,7 +167,7 @@ class SongsHandler {
           message: error.message,
         });
         response.code(error.statusCode);
-        logger.warn(ctx, 'Bad Request', 'deleteSongByIdHandler', error.name);
+        logger.warn(ctx, 'Bad Request', 'deletePlaylistByIdHandler', error.name);
         return response;
       }
 
@@ -177,10 +177,10 @@ class SongsHandler {
         message: 'Sorry, there was a failure on server.',
       });
       response.code(500);
-      logger.error(ctx, 'Internal Error', 'deleteSongByIdHandler', error.name);
+      logger.error(ctx, 'Internal Error', 'deletePlaylistByIdHandler', error.name);
       return response;
     }
   }
 }
 
-module.exports = SongsHandler;
+module.exports = PlaylistsHandler;
