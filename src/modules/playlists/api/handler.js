@@ -1,8 +1,3 @@
-const ClientError = require('../../../exceptions/ClientError');
-const logger = require('../../../utils/logger');
-
-const ctx = 'Playlists-Api-Handler';
-
 class PlaylistsHandler {
   constructor(service, validator) {
     this._service = service;
@@ -10,176 +5,103 @@ class PlaylistsHandler {
 
     this.postPlaylistHandler = this.postPlaylistHandler.bind(this);
     this.getPlaylistsHandler = this.getPlaylistsHandler.bind(this);
-    this.getPlaylistByIdHandler = this.getPlaylistByIdHandler.bind(this);
-    this.putPlaylistByIdHandler = this.putPlaylistByIdHandler.bind(this);
     this.deletePlaylistByIdHandler = this.deletePlaylistByIdHandler.bind(this);
+    this.postSongHandler = this.postSongHandler.bind(this);
+    this.getSongsHandler = this.getSongsHandler.bind(this);
+    this.deleteSongByIdHandler = this.deleteSongByIdHandler.bind(this);
   }
 
-  async postPlaylistHandler({ payload }, h) {
-    try {
-      this._validator.validatePlaylistPayload(payload);
+  async postPlaylistHandler({ payload, auth }, h) {
+    this._validator.validatePostPlaylistPayload(payload);
+    const { name } = payload;
+    const { id: credentialId } = auth.credentials;
 
-      const playlistId = await this._service.addPlaylist(payload);
+    const playlistId = await this._service.addPlaylist({
+      name, owner: credentialId,
+    });
 
-      const response = h.response({
-        status: 'success',
-        message: 'Song added successfully',
-        data: {
-          playlistId,
-        },
-      });
-      response.code(201);
+    const response = h.response({
+      status: 'success',
+      message: 'Playlist berhasil ditambahkan',
+      data: {
+        playlistId,
+      },
+    });
+    response.code(201);
 
-      return response;
-    } catch (error) {
-      if (error instanceof ClientError) {
-        const response = h.response({
-          status: 'fail',
-          message: error.message,
-        });
-        response.code(error.statusCode);
-        logger.warn(ctx, 'Bad Request', 'postPlaylistHandler', error.name);
-        return response;
-      }
-      // Server ERROR!
-      const response = h.response({
-        status: 'error',
-        message: 'Sorry, there was a failure on server.',
-      });
-      response.code(500);
-      logger.error(ctx, 'Internal Error', 'postPlaylistHandler', error.name);
-      return response;
-    }
+    return response;
   }
 
-  async getPlaylistsHandler(request, h) {
-    try {
-      const playlists = await this._service.getPlaylists();
-      return {
-        status: 'success',
-        data: {
-          playlists,
-        },
-      };
-    } catch (error) {
-      if (error instanceof ClientError) {
-        const response = h.response({
-          status: 'fail',
-          message: error.message,
-        });
-        response.code(error.statusCode);
-        logger.warn(ctx, 'Bad Request', 'getPlaylistsHandler', error.name);
-        return response;
-      }
+  async getPlaylistsHandler({ auth: { credentials } }) {
+    const { id: credentialId } = credentials;
+    const playlists = await this._service.getPlaylists(credentialId);
 
-      // Server ERROR!
-      const response = h.response({
-        status: 'error',
-        message: 'Sorry, there was a failure on server.',
-      });
-      response.code(500);
-      logger.error(ctx, 'Internal Error', 'getPlaylistsHandler', error.name);
-      return response;
-    }
+    return {
+      status: 'success',
+      data: {
+        playlists,
+      },
+    };
   }
 
-  async getPlaylistByIdHandler(request, h) {
-    try {
-      const { id } = request.params;
-      const playlist = await this._service.getPlaylistById(id);
-      return {
-        status: 'success',
-        data: {
-          playlist,
-        },
-      };
-    } catch (error) {
-      if (error instanceof ClientError) {
-        const response = h.response({
-          status: 'fail',
-          message: error.message,
-        });
-        response.code(error.statusCode);
-        logger.warn(ctx, 'Bad Request', 'getPlaylistByIdHandler', error.name);
-        return response;
-      }
-      // Server ERROR!
-      const response = h.response({
-        status: 'error',
-        message: 'Sorry, there was a failure on server.',
-      });
-      response.code(500);
-      logger.error(ctx, 'Internal Error', 'getPlaylistByIdHandler', error.name);
-      return response;
-    }
+  async deletePlaylistByIdHandler({ params, auth }) {
+    const { playlistId } = params;
+    const { id: credentialId } = auth.credentials;
+
+    await this._service.verifyPlaylistOwner(playlistId, credentialId);
+    await this._service.deletePlaylistById(playlistId);
+
+    return {
+      status: 'success',
+      message: 'Playlist berhasil dihapus',
+    };
   }
 
-  async putPlaylistByIdHandler(request, h) {
-    try {
-      this._validator.validatePlaylistPayload(request.payload);
-      const {
-        title, year, performer, genre, duration,
-      } = request.payload;
-      const { id } = request.params;
+  async postSongHandler({ payload, params, auth }, h) {
+    this._validator.validatePostSongPayload(payload);
+    const { playlistId } = params;
+    const { songId } = payload;
+    const { id: credentialId } = auth.credentials;
 
-      await this._service.editPlaylistById(id, {
-        title, year, performer, genre, duration,
-      });
+    await this._service.verifyPlaylistAccess(playlistId, credentialId);
+    await this._service.addSongToPlaylist(playlistId, songId);
 
-      return {
-        status: 'success',
-        message: 'Song updated successfully',
-      };
-    } catch (error) {
-      if (error instanceof ClientError) {
-        const response = h.response({
-          status: 'fail',
-          message: error.message,
-        });
-        response.code(error.statusCode);
-        logger.warn(ctx, 'Bad Request', 'putPlaylistByIdHandler', error.name);
-        return response;
-      }
+    const response = h.response({
+      status: 'success',
+      message: 'Lagu berhasil ditambahkan ke playlist',
+    });
+    response.code(201);
 
-      // Server ERROR!
-      const response = h.response({
-        status: 'error',
-        message: 'Sorry, there was a failure on server.',
-      });
-      response.code(500);
-      logger.error(ctx, 'Internal Error', 'putPlaylistByIdHandler', error.name);
-      return response;
-    }
+    return response;
   }
 
-  async deletePlaylistByIdHandler(request, h) {
-    try {
-      const { id } = request.params;
-      await this._service.deletePlaylistById(id);
-      return {
-        status: 'success',
-        message: 'Playlist deleted successfully',
-      };
-    } catch (error) {
-      if (error instanceof ClientError) {
-        const response = h.response({
-          status: 'fail',
-          message: error.message,
-        });
-        response.code(error.statusCode);
-        logger.warn(ctx, 'Bad Request', 'deletePlaylistByIdHandler', error.name);
-        return response;
-      }
+  async getSongsHandler({ params, auth }) {
+    const { playlistId } = params;
+    const { id: credentialId } = auth.credentials;
 
-      // Server ERROR!
-      const response = h.response({
-        status: 'error',
-        message: 'Sorry, there was a failure on server.',
-      });
-      response.code(500);
-      logger.error(ctx, 'Internal Error', 'deletePlaylistByIdHandler', error.name);
-      return response;
-    }
+    await this._service.verifyPlaylistAccess(playlistId, credentialId);
+    const songs = await this._service.getSongsFromPlaylist(playlistId);
+
+    return {
+      status: 'success',
+      data: {
+        songs,
+      },
+    };
+  }
+
+  async deleteSongByIdHandler({ params, payload, auth }) {
+    const { playlistId } = params;
+    const { songId } = payload;
+    const { id: credentialId } = auth.credentials;
+
+    await this._service.verifyPlaylistAccess(playlistId, credentialId);
+    await this._service.deleteSongFromPlaylist(playlistId, songId);
+
+    return {
+      status: 'success',
+      message: 'Lagu berhasil dihapus dari playlist',
+    };
   }
 }
 

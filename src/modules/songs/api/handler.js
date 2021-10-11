@@ -1,8 +1,3 @@
-const ClientError = require('../../../exceptions/ClientError');
-const logger = require('../../../utils/logger');
-
-const ctx = 'Songs-Api-Handler';
-
 class SongsHandler {
   constructor(service, validator) {
     this._service = service;
@@ -16,170 +11,62 @@ class SongsHandler {
   }
 
   async postSongHandler({ payload }, h) {
-    try {
-      this._validator.validateSongPayload(payload);
+    this._validator.validateSongPayload(payload);
+    const songId = await this._service.addSong(payload);
+    const response = h.response({
+      status: 'success',
+      message: 'Song added successfully',
+      data: {
+        songId,
+      },
+    });
+    response.code(201);
 
-      const songId = await this._service.addSong(payload);
-
-      const response = h.response({
-        status: 'success',
-        message: 'Song added successfully',
-        data: {
-          songId,
-        },
-      });
-      response.code(201);
-
-      return response;
-    } catch (error) {
-      if (error instanceof ClientError) {
-        const response = h.response({
-          status: 'fail',
-          message: error.message,
-        });
-        response.code(error.statusCode);
-        logger.warn(ctx, 'Bad Request', 'postSongHandler', error.name);
-        return response;
-      }
-      // Server ERROR!
-      const response = h.response({
-        status: 'error',
-        message: 'Sorry, there was a failure on server.',
-      });
-      response.code(500);
-      logger.error(ctx, 'Internal Error', 'postSongHandler', error.name);
-      return response;
-    }
+    return response;
   }
 
-  async getSongsHandler(request, h) {
-    try {
-      const songs = await this._service.getSongs();
-      return {
-        status: 'success',
-        data: {
-          songs,
-        },
-      };
-    } catch (error) {
-      if (error instanceof ClientError) {
-        const response = h.response({
-          status: 'fail',
-          message: error.message,
-        });
-        response.code(error.statusCode);
-        logger.warn(ctx, 'Bad Request', 'getSongsHandler', error.name);
-        return response;
-      }
+  async getSongsHandler() {
+    const songs = await this._service.getSongs();
 
-      // Server ERROR!
-      const response = h.response({
-        status: 'error',
-        message: 'Sorry, there was a failure on server.',
-      });
-      response.code(500);
-      logger.error(ctx, 'Internal Error', 'getSongsHandler', error.name);
-      return response;
-    }
+    return {
+      status: 'success',
+      data: {
+        songs,
+      },
+    };
   }
 
-  async getSongByIdHandler(request, h) {
-    try {
-      const { id } = request.params;
-      const song = await this._service.getSongById(id);
-      return {
-        status: 'success',
-        data: {
-          song,
-        },
-      };
-    } catch (error) {
-      if (error instanceof ClientError) {
-        const response = h.response({
-          status: 'fail',
-          message: error.message,
-        });
-        response.code(error.statusCode);
-        logger.warn(ctx, 'Bad Request', 'getSongByIdHandler', error.name);
-        return response;
-      }
-      // Server ERROR!
-      const response = h.response({
-        status: 'error',
-        message: 'Sorry, there was a failure on server.',
-      });
-      response.code(500);
-      logger.error(ctx, 'Internal Error', 'getSongByIdHandler', error.name);
-      return response;
-    }
+  async getSongByIdHandler({ params }) {
+    const { id } = params;
+    const song = await this._service.getSongById(id);
+
+    return {
+      status: 'success',
+      data: {
+        song,
+      },
+    };
   }
 
-  async putSongByIdHandler(request, h) {
-    try {
-      this._validator.validateSongPayload(request.payload);
-      const {
-        title, year, performer, genre, duration,
-      } = request.payload;
-      const { id } = request.params;
+  async putSongByIdHandler({ payload, params }) {
+    this._validator.validateSongPayload(payload);
+    const { id } = params;
+    await this._service.editSongById(id, payload);
 
-      await this._service.editSongById(id, {
-        title, year, performer, genre, duration,
-      });
-
-      return {
-        status: 'success',
-        message: 'Song updated successfully',
-      };
-    } catch (error) {
-      if (error instanceof ClientError) {
-        const response = h.response({
-          status: 'fail',
-          message: error.message,
-        });
-        response.code(error.statusCode);
-        logger.warn(ctx, 'Bad Request', 'putSongByIdHandler', error.name);
-        return response;
-      }
-
-      // Server ERROR!
-      const response = h.response({
-        status: 'error',
-        message: 'Sorry, there was a failure on server.',
-      });
-      response.code(500);
-      logger.error(ctx, 'Internal Error', 'putSongByIdHandler', error.name);
-      return response;
-    }
+    return {
+      status: 'success',
+      message: 'Song updated successfully',
+    };
   }
 
-  async deleteSongByIdHandler(request, h) {
-    try {
-      const { id } = request.params;
-      await this._service.deleteSongById(id);
-      return {
-        status: 'success',
-        message: 'Song deleted successfully',
-      };
-    } catch (error) {
-      if (error instanceof ClientError) {
-        const response = h.response({
-          status: 'fail',
-          message: error.message,
-        });
-        response.code(error.statusCode);
-        logger.warn(ctx, 'Bad Request', 'deleteSongByIdHandler', error.name);
-        return response;
-      }
+  async deleteSongByIdHandler({ params }) {
+    const { id } = params;
+    await this._service.deleteSongById(id);
 
-      // Server ERROR!
-      const response = h.response({
-        status: 'error',
-        message: 'Sorry, there was a failure on server.',
-      });
-      response.code(500);
-      logger.error(ctx, 'Internal Error', 'deleteSongByIdHandler', error.name);
-      return response;
-    }
+    return {
+      status: 'success',
+      message: 'Song deleted successfully',
+    };
   }
 }
 

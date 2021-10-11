@@ -4,6 +4,9 @@ const { Pool } = require('pg');
 const InvariantError = require('../../../exceptions/InvariantError');
 const NotFoundError = require('../../../exceptions/NotFoundError');
 const AuthenticationError = require('../../../exceptions/AuthenticationError');
+const logger = require('../../../utils/logger');
+
+const ctx = 'Users-Services-UsersService';
 
 class UsersService {
   constructor() {
@@ -23,7 +26,7 @@ class UsersService {
 
     const result = await this._pool.query(query);
 
-    if (!result.rows.length) {
+    if (!result.rowCount) {
       throw new InvariantError('User gagal ditambahkan');
     }
     return result.rows[0].id;
@@ -37,7 +40,8 @@ class UsersService {
 
     const result = await this._pool.query(query);
 
-    if (result.rows.length > 0) {
+    if (result.rowCount > 0) {
+      logger.warn(ctx, 'Failed to add user. Username is existing', 'verifyNewUsername');
       throw new InvariantError('Gagal menambahkan user. Username sudah digunakan.');
     }
   }
@@ -50,7 +54,8 @@ class UsersService {
 
     const result = await this._pool.query(query);
 
-    if (!result.rows.length) {
+    if (!result.rowCount) {
+      logger.warn(ctx, 'Failed to get user.', 'getUserById');
       throw new NotFoundError('User tidak ditemukan');
     }
 
@@ -65,7 +70,8 @@ class UsersService {
 
     const result = await this._pool.query(query);
 
-    if (!result.rows.length) {
+    if (!result.rowCount) {
+      logger.warn(ctx, 'Credentials is invalid', 'verifyUserCredential');
       throw new AuthenticationError('Kredensial yang Anda berikan salah');
     }
 
@@ -74,6 +80,7 @@ class UsersService {
     const match = await bcrypt.compare(password, hashedPassword);
 
     if (!match) {
+      logger.warn(ctx, 'Credentials is invalid', 'verifyUserCredential');
       throw new AuthenticationError('Kredensial yang Anda berikan salah');
     }
 
