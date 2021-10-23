@@ -6,8 +6,9 @@ const logger = require('../../../utils/logger');
 const ctx = 'Playlists-Services-PlaylistsService';
 
 class CollaborationsService {
-  constructor() {
+  constructor(cacheService) {
     this._pool = new Pool();
+    this._cacheService = cacheService;
   }
 
   async addCollaboration(playlistId, userId) {
@@ -39,6 +40,8 @@ class CollaborationsService {
       logger.warn(ctx, 'Failed to remove collaboration', 'deleteCollaboration');
       throw new InvariantError('Kolaborasi gagal dihapus');
     }
+
+    await this._cacheService.delete(`songs:${playlistId}`);
   }
 
   async verifyCollaborator(playlistId, userId) {

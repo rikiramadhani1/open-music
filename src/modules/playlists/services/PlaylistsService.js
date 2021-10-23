@@ -8,9 +8,10 @@ const logger = require('../../../utils/logger');
 const ctx = 'Playlists-Services-PlaylistsService';
 
 class PlaylistsService {
-  constructor(collaborationService) {
+  constructor(collaborationService, cacheService) {
     this._pool = new Pool();
     this._collaborationService = collaborationService;
+    this._cacheService = cacheService;
   }
 
   async addPlaylist({ name, owner }) {
@@ -71,20 +72,31 @@ class PlaylistsService {
       logger.warn(ctx, 'Failed to add song to playlist', 'addSongToPlaylist');
       throw new InvariantError('Lagu gagal ditambahkan ke playlist');
     }
+
+    await this._cacheService.delete(`songs:${playlistId}`);
   }
 
   async getSongsFromPlaylist(playlistId) {
-    const query = {
-      text: `SELECT songs.id, songs.title, songs.performer
-      FROM songs
-      JOIN playlistsongs
-      ON songs.id = playlistsongs.song_id WHERE playlistsongs.playlist_id = $1`,
-      values: [playlistId],
-    };
+    try {
+      // mendapatkan lagu dari cache
+      const result = await this._cacheService.get(`songs:${playlistId}`);
+      return JSON.parse(result);
+    } catch (error) {
+      const query = {
+        text: `SELECT songs.id, songs.title, songs.performer
+        FROM songs
+        JOIN playlistsongs
+        ON songs.id = playlistsongs.song_id WHERE playlistsongs.playlist_id = $1`,
+        values: [playlistId],
+      };
 
-    const result = await this._pool.query(query);
+      const result = await this._pool.query(query);
 
-    return result.rows;
+      // simpan lagu pada cache sebelum fungsi mengembalikan nilai
+      await this._cacheService.set(`songs:${playlistId}`, JSON.stringify(result.rows));
+
+      return result.rows;
+    }
   }
 
   async deleteSongFromPlaylist(playlistId, songId) {
@@ -99,6 +111,8 @@ class PlaylistsService {
       logger.warn(ctx, 'Failed to remove song from playlist', 'deleteSongFromPlaylist');
       throw new InvariantError('Lagu gagal dihapus');
     }
+
+    await this._cacheService.delete(`songs:${playlistId}`);
   }
 
   async verifyPlaylistOwner(id, owner) {
